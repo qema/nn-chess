@@ -18,7 +18,7 @@ class PolicyModel(nn.Module):
         self.fc1 = nn.Linear(64*128, 256)
         self.relu4 = nn.ReLU()
         self.fc2 = nn.Linear(256, 64*64)
-        self.softmax = nn.Softmax(dim=1)
+        self.softmax = nn.LogSoftmax(dim=1)
 
     def forward(self, boards):
         out = self.conv1(boards)

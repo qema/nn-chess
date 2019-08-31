@@ -2,9 +2,9 @@ from common import *
 import random
 import queue
 
-game_batch_size = 16#128
+game_batch_size = 128
 max_recent_opps = 10000
-pool_update_dur = 2#64
+pool_update_dur = 64
 
 def train(model, opt, criterion, boards, actions, rewards):
     model.zero_grad()
