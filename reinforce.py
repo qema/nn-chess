@@ -6,7 +6,7 @@ max_recent_opps = 10000
 pool_update_dur = 64
 grad_clip = 0.25
 
-def train(model, opt, criterion, log_probs, rewards):
+def train(model, opt, log_probs, rewards):
     model.zero_grad()
     loss = -log_probs * rewards
     loss = torch.sum(loss) / game_batch_size
@@ -90,9 +90,8 @@ if __name__ == "__main__":
     #    map_location=get_device()))
     opp_model_pool = []
 
-    opt = optim.Adam(model.parameters(), lr=1e-4)
+    opt = optim.Adam(model.parameters(), lr=1e-3)
     #opt = optim.SGD(model.parameters(), lr=1e-5)
-    criterion = nn.NLLLoss(reduction="none")
 
     for epoch in range(10000):
         print("Epoch {}".format(epoch))
@@ -101,7 +100,7 @@ if __name__ == "__main__":
             epoch)
 
         # train
-        loss = train(model, opt, criterion, log_probs, rewards)
+        loss = train(model, opt, log_probs, rewards)
         print("Loss: {:.6f}".format(loss.item()))
         print()
 
