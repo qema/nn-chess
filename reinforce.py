@@ -57,7 +57,7 @@ def run_games(n_games, model, opp_model, epoch):
                     rewards[n] += [reward]*len(moves[n])
         t += 1
 
-    flatten = lambda l: [x for x in y for y in l]
+    flatten = lambda l: [x for y in l for x in y]
     return flatten(moves), flatten(states), flatten(rewards)
 
 if __name__ == "__main__":
