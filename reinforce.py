@@ -1,6 +1,5 @@
 from common import *
 import random
-import queue
 
 game_batch_size = 128
 max_recent_opps = 10000
@@ -16,7 +15,7 @@ def train(model, opt, criterion, boards, actions, rewards):
     opt.step()
     return loss
 
-def run_games(n_games, queue, model, opp_model, epoch):
+def run_games(n_games, model, opp_model, epoch):
     moves = [[] for i in range(n_games)]
     states = [[] for i in range(n_games)]
     rewards = [[] for i in range(n_games)]
@@ -36,29 +35,30 @@ def run_games(n_games, queue, model, opp_model, epoch):
         pred = torch.cat((pred_l, pred_r), dim=0)
 
         for n, board in enumerate(boards):
-            if not board.is_game_over():
-                legal_moves = list(board.legal_moves)
-                valid_idxs = [move_to_action_idx(move) for move in legal_moves]
-                pred_n = pred[n][valid_idxs]
-                actions = torch.distributions.Categorical(logits=pred_n)
-                move = legal_moves[actions.sample().item()]
-                if move.promotion is not None:
-                    move.promotion = 5
-                if (n < n_games//2) == (t % 2 == 0):
-                    moves[n].append(move.uci())
-                    states[n].append(board.fen())
-                board.push(move)
-            else:
-                if n not in done_idxs:
+            if n not in done_idxs:
+                if not board.is_game_over():
+                    legal_moves = list(board.legal_moves)
+                    valid_idxs = [move_to_action_idx(move) for move in
+                        legal_moves]
+                    pred_n = pred[n][valid_idxs]
+                    actions = torch.distributions.Categorical(logits=pred_n)
+                    move = legal_moves[actions.sample().item()]
+                    if move.promotion is not None:
+                        move.promotion = 5
+                    if (n < n_games//2) == (t % 2 == 0):
+                        moves[n].append(move.uci())
+                        states[n].append(board.fen())
+                    board.push(move)
+                else:
                     done_idxs.add(n)
                     n_done += 1
                     reward = reward_for_side(board, n < n_games//2)
                     #print(n, board.result(), reward)
                     rewards[n] += [reward]*len(moves[n])
-
-                    queue.put((moves[n], states[n], rewards[n]))
         t += 1
 
+    flatten = lambda l: [x for x in y for y in l]
+    return flatten(moves), flatten(states), flatten(rewards)
 
 if __name__ == "__main__":
     model = PolicyModel().to(get_device())
@@ -76,14 +76,10 @@ if __name__ == "__main__":
         # play n games
         moves, states, rewards = [], [], []
         with torch.no_grad():
-            q = queue.Queue()
-            run_games(game_batch_size, q, model, opp_model, epoch)
-
-            while not q.empty():
-                m, s, r = q.get()
-                moves += m
-                states += s
-                rewards += r
+            m, s, r = run_games(game_batch_size, model, opp_model, epoch)
+            moves += m
+            states += s
+            rewards += r
 
         # train
         boards = states_to_tensor(states)
