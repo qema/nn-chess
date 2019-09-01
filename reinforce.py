@@ -27,33 +27,52 @@ def run_games(n_games, model, opp_model, epoch):
     t = 0
 
     while n_done < n_games:
-        board_t = states_to_tensor([board.fen() for board in boards])
+        l_board_idxs, r_board_idxs = [0]*n_games, [0]*n_games
+        l_boards, r_boards = [], []
+        for n, board in enumerate(boards):
+            if n not in done_idxs:
+                if n < n_games // 2:
+                    l_board_idxs[n] = len(l_boards)
+                    l_boards.append(board.fen())
+                else:
+                    r_board_idxs[n] = len(r_boards)
+                    r_boards.append(board.fen())
+
+        if l_boards:
+            l_boards_t = states_to_tensor(l_boards)
+        if r_boards:
+            r_boards_t = states_to_tensor(r_boards)
+
         if t % 2 == 0:
-            pred_l = model(board_t[:n_games//2])
-            pred_r = opp_model(board_t[n_games//2:])
+            pred_l = model(l_boards_t)
+            pred_r = opp_model(r_boards_t)
         else:
-            pred_l = opp_model(board_t[:n_games//2])
-            pred_r = model(board_t[n_games//2:])
-        pred = torch.cat((pred_l, pred_r), dim=0)
+            pred_l = opp_model(l_boards_t)
+            pred_r = model(r_boards_t)
 
         for n, board in enumerate(boards):
             if n not in done_idxs:
-                if not board.is_game_over():
-                    legal_moves = list(board.legal_moves)
-                    valid_idxs = [move_to_action_idx(move) for move in
-                        legal_moves]
-                    pred_n = pred[n][valid_idxs]
-                    actions = torch.distributions.Categorical(logits=pred_n)
-                    move = legal_moves[actions.sample().item()]
-                    if move.promotion is not None:
-                        move.promotion = 5
-                    if (n < n_games//2) == (t % 2 == 0):
-                        moves[n].append(move.uci())
-                        states[n].append(board.fen())
-                    board.push(move)
+                legal_moves = list(board.legal_moves)
+                valid_idxs = [move_to_action_idx(move) for move in
+                    legal_moves]
+                if n < n_games // 2:
+                    pred = pred_l[l_board_idxs[n]][valid_idxs]
                 else:
+                    pred = pred_r[r_board_idxs[n]][valid_idxs]
+
+                actions = torch.distributions.Categorical(logits=pred)
+                move = legal_moves[actions.sample().item()]
+                if move.promotion is not None:
+                    move.promotion = 5
+                if (n < n_games//2) == (t % 2 == 0):
+                    moves[n].append(move.uci())
+                    states[n].append(board.fen())
+                board.push(move)
+
+                if board.is_game_over():
                     done_idxs.add(n)
                     n_done += 1
+                    print(n_done, t)
                     reward = reward_for_side(board, n < n_games//2)
                     #print(n, board.result(), reward)
                     rewards[n] += [reward]*len(moves[n])
