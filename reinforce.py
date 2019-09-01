@@ -1,7 +1,7 @@
 from common import *
 import random
 
-game_batch_size = 128
+game_batch_size = 8
 max_recent_opps = 10000
 pool_update_dur = 64
 
@@ -87,7 +87,9 @@ if __name__ == "__main__":
         rewards = torch.tensor(rewards, dtype=torch.float,
             device=get_device())
         loss = train(model, opt, criterion, boards, actions, rewards)
-        del boards, actions, rewards
+        boards.detach()
+        actions.detach()
+        rewards.detach()
         print("Loss: {:.6f}".format(loss.item()))
         print()
 
