@@ -87,6 +87,7 @@ if __name__ == "__main__":
         rewards = torch.tensor(rewards, dtype=torch.float,
             device=get_device())
         loss = train(model, opt, criterion, boards, actions, rewards)
+        del boards, actions, rewards
         print("Loss: {:.6f}".format(loss.item()))
         print()
 
