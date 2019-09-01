@@ -6,20 +6,17 @@ max_recent_opps = 10000
 pool_update_dur = 64
 grad_clip = 0.25
 
-def train(model, opt, criterion, boards, actions, rewards):
+def train(model, opt, criterion, log_probs, rewards):
     model.zero_grad()
-    pred = model(boards)
-    loss = criterion(pred, actions)
-    loss *= rewards
+    loss = -log_probs * rewards
     loss = torch.sum(loss) / game_batch_size
     loss.backward()
     torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
     opt.step()
-    return loss.item()
+    return loss
 
 def run_games(n_games, model, opp_model, epoch):
-    moves = [[] for i in range(n_games)]
-    states = [[] for i in range(n_games)]
+    log_probs = [None for i in range(n_games)]
     rewards = [[] for i in range(n_games)]
     boards = [chess.Board() for i in range(n_games)]
     n_done = 0
@@ -45,9 +42,9 @@ def run_games(n_games, model, opp_model, epoch):
 
         if t % 2 == 0:
             pred_l = model(l_boards_t)
-            pred_r = opp_model(r_boards_t)
+            pred_r = opp_model(r_boards_t).detach()
         else:
-            pred_l = opp_model(l_boards_t)
+            pred_l = opp_model(l_boards_t).detach()
             pred_r = model(r_boards_t)
 
         for n, board in enumerate(boards):
@@ -61,12 +58,17 @@ def run_games(n_games, model, opp_model, epoch):
                     pred = pred_r[r_board_idxs[n]][valid_idxs]
 
                 actions = torch.distributions.Categorical(logits=pred)
-                move = legal_moves[actions.sample().item()]
+                action_idx = actions.sample()
+                move = legal_moves[action_idx.item()]
                 if move.promotion is not None:
                     move.promotion = 5
                 if (n < n_games//2) == (t % 2 == 0):
-                    moves[n].append(move.uci())
-                    states[n].append(board.fen())
+                    log_prob = actions.log_prob(action_idx)
+                    if log_probs[n] is None:
+                        log_probs[n] = log_prob.unsqueeze(0)
+                    else:
+                        log_probs[n] = torch.cat((log_probs[n],
+                            log_prob.unsqueeze(0)))
                 board.push(move)
 
                 if board.is_game_over():
@@ -74,11 +76,12 @@ def run_games(n_games, model, opp_model, epoch):
                     n_done += 1
                     reward = reward_for_side(board, n < n_games//2)
                     #print(n, board.result(), reward)
-                    rewards[n] += [reward]*len(moves[n])
+                    rewards[n] += [reward]*len(log_probs[n])
         t += 1
 
-    flatten = lambda l: [x for y in l for x in y]
-    return flatten(moves), flatten(states), flatten(rewards)
+    rewards = torch.tensor([x for l in rewards for x in l], dtype=torch.float,
+        device=get_device())
+    return torch.cat(log_probs), rewards
 
 if __name__ == "__main__":
     model = PolicyModel().to(get_device())
@@ -94,20 +97,12 @@ if __name__ == "__main__":
     for epoch in range(10000):
         print("Epoch {}".format(epoch))
         # play n games
-        moves, states, rewards = [], [], []
-        with torch.no_grad():
-            m, s, r = run_games(game_batch_size, model, opp_model, epoch)
-            moves += m
-            states += s
-            rewards += r
+        log_probs, rewards = run_games(game_batch_size, model, opp_model,
+            epoch)
 
         # train
-        boards_t = states_to_tensor(states)
-        actions_t = moves_to_tensor(moves)
-        rewards_t = torch.tensor(rewards, dtype=torch.float,
-            device=get_device())
-        loss = train(model, opt, criterion, boards_t, actions_t, rewards_t)
-        print("Loss: {:.6f}".format(loss))
+        loss = train(model, opt, criterion, log_probs, rewards)
+        print("Loss: {:.6f}".format(loss.item()))
         print()
 
         torch.save(model.state_dict(), "models/reinforce.pt")
