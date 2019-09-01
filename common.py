@@ -47,8 +47,9 @@ def get_device():
 # input: list of fens
 def states_to_tensor(states):
     boards_t = []
+    board = chess.Board()
     for state in states:
-        board = chess.Board(state)
+        board.set_fen(state)
         side = board.turn
         piece_map = board.piece_map()
 

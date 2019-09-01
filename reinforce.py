@@ -1,9 +1,10 @@
 from common import *
 import random
 
-game_batch_size = 8
+game_batch_size = 128
 max_recent_opps = 10000
 pool_update_dur = 64
+grad_clip = 0.25
 
 def train(model, opt, criterion, boards, actions, rewards):
     model.zero_grad()
@@ -12,8 +13,9 @@ def train(model, opt, criterion, boards, actions, rewards):
     loss *= rewards
     loss = torch.sum(loss) / game_batch_size
     loss.backward()
+    torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
     opt.step()
-    return loss
+    return loss.item()
 
 def run_games(n_games, model, opp_model, epoch):
     moves = [[] for i in range(n_games)]
@@ -67,7 +69,7 @@ if __name__ == "__main__":
     #    map_location=get_device()))
     opp_model_pool = []
 
-    opt = optim.Adam(model.parameters(), lr=1e-3)
+    opt = optim.Adam(model.parameters(), lr=1e-4)
     #opt = optim.SGD(model.parameters(), lr=1e-5)
     criterion = nn.NLLLoss(reduction="none")
 
@@ -82,15 +84,12 @@ if __name__ == "__main__":
             rewards += r
 
         # train
-        boards = states_to_tensor(states)
-        actions = moves_to_tensor(moves)
-        rewards = torch.tensor(rewards, dtype=torch.float,
+        boards_t = states_to_tensor(states)
+        actions_t = moves_to_tensor(moves)
+        rewards_t = torch.tensor(rewards, dtype=torch.float,
             device=get_device())
-        loss = train(model, opt, criterion, boards, actions, rewards)
-        boards.detach()
-        actions.detach()
-        rewards.detach()
-        print("Loss: {:.6f}".format(loss.item()))
+        loss = train(model, opt, criterion, boards_t, actions_t, rewards_t)
+        print("Loss: {:.6f}".format(loss))
         print()
 
         torch.save(model.state_dict(), "models/reinforce.pt")
