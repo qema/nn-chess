@@ -72,7 +72,6 @@ def run_games(n_games, model, opp_model, epoch):
                 if board.is_game_over():
                     done_idxs.add(n)
                     n_done += 1
-                    print(n_done, t)
                     reward = reward_for_side(board, n < n_games//2)
                     #print(n, board.result(), reward)
                     rewards[n] += [reward]*len(moves[n])
