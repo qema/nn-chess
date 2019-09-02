@@ -53,17 +53,18 @@ def run_games(n_games, model, opp_model, epoch):
                 valid_idxs = [move_to_action_idx(move) for move in
                     legal_moves]
                 if n < n_games // 2:
-                    pred = pred_l[l_board_idxs[n]][valid_idxs]
+                    pred = pred_l[l_board_idxs[n]]
                 else:
-                    pred = pred_r[r_board_idxs[n]][valid_idxs]
+                    pred = pred_r[r_board_idxs[n]]
 
-                actions = torch.distributions.Categorical(logits=pred)
+                actions = torch.distributions.Categorical(
+                    logits=pred[valid_idxs])
                 action_idx = actions.sample()
                 move = legal_moves[action_idx.item()]
                 if move.promotion is not None:
                     move.promotion = 5
                 if (n < n_games//2) == (t % 2 == 0):
-                    log_prob = actions.log_prob(action_idx)
+                    log_prob = pred[valid_idxs[action_idx]]
                     if log_probs[n] is None:
                         log_probs[n] = log_prob.unsqueeze(0)
                     else:
