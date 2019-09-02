@@ -2,19 +2,21 @@ from common import *
 import random
 import argparse
 
-#parser = argparse.ArgumentParser()
-#parser.add_argument("game_batch_size", 
-game_batch_size = 128
-max_recent_opps = 10000
-pool_update_dur = 64
-grad_clip = 0.25
+parser = argparse.ArgumentParser(description="Train chess nn with RL")
+parser.add_argument("--game_batch_size", type=int, default=128)
+parser.add_argument("--max_recent_opps", type=int, default=10000)
+parser.add_argument("--pool_update_dur", type=int, default=64)
+parser.add_argument("--grad_clip", type=float, default=1)
+parser.add_argument("--should_clip_grad", type=bool, default=False)
+args = parser.parse_args()
 
 def train(model, opt, log_probs, rewards):
     model.zero_grad()
     loss = -log_probs * rewards
-    loss = torch.sum(loss) / game_batch_size
+    loss = torch.sum(loss) / args.game_batch_size
     loss.backward()
-    #torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
+    if args.should_clip_grad:
+        torch.nn.utils.clip_grad_norm_(model.parameters(), args.grad_clip)
     opt.step()
     return loss
 
@@ -100,7 +102,7 @@ if __name__ == "__main__":
     for epoch in range(10000):
         print("Epoch {}".format(epoch))
         # play n games
-        log_probs, rewards = run_games(game_batch_size, model, opp_model,
+        log_probs, rewards = run_games(args.game_batch_size, model, opp_model,
             epoch)
 
         # train
@@ -110,9 +112,9 @@ if __name__ == "__main__":
 
         torch.save(model.state_dict(), "models/reinforce.pt")
 
-        if epoch % pool_update_dur == 0:
+        if epoch % args.pool_update_dur == 0:
             opp_model_pool.append(model.state_dict())
-            opp_model_pool = opp_model_pool[-max_recent_opps:]
+            opp_model_pool = opp_model_pool[-args.max_recent_opps:]
 
         # pick random opponent out of pool
         params = random.choice(opp_model_pool)

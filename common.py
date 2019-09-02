@@ -4,6 +4,9 @@ import torch.optim as optim
 import chess
 import random
 
+#import chess.variant
+#chess.Board = chess.variant.RacingKingsBoard
+
 class PolicyModel(nn.Module):
     def __init__(self):
         super(PolicyModel, self).__init__()
@@ -122,6 +125,9 @@ def reward_for_side(board, side):
     reward = reward_dict[result]
     if not side:
         reward *= -1
+    # TODO
+    if reward == 0:
+        reward = -0.1
     return reward
 
 if __name__ == "__main__":
