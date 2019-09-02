@@ -1,6 +1,9 @@
 from common import *
 import random
+import argparse
 
+#parser = argparse.ArgumentParser()
+#parser.add_argument("game_batch_size", 
 game_batch_size = 128
 max_recent_opps = 10000
 pool_update_dur = 64
@@ -11,7 +14,7 @@ def train(model, opt, log_probs, rewards):
     loss = -log_probs * rewards
     loss = torch.sum(loss) / game_batch_size
     loss.backward()
-    torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
+    #torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
     opt.step()
     return loss
 
