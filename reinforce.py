@@ -16,6 +16,9 @@ def train(model, opt, log_probs, rewards):
     loss = -log_probs * rewards
     loss = torch.sum(loss) / args.game_batch_size
     loss.backward()
+#    if loss > -0.0001 and loss < 0.0001:
+#        print(log_probs)
+#        print(rewards)
     if args.should_clip_grad:
         torch.nn.utils.clip_grad_norm_(model.parameters(), args.grad_clip)
     opt.step()
@@ -86,8 +89,8 @@ def run_games(n_games, model, opp_model, epoch):
                     done_idxs.add(n)
                     n_done += 1
                     reward = reward_for_side(board, n < n_games//2)
-                    if reward == 0:
-                        reward = -0.1
+                    #if reward == 0:
+                    #    reward = -0.1
                     #print(n, board.result(), reward)
                     rewards[n] += [reward]*len(log_probs[n])
         t += 1
@@ -98,14 +101,14 @@ def run_games(n_games, model, opp_model, epoch):
 
 if __name__ == "__main__":
     model = PolicyModel().to(get_device())
-    #model.load_state_dict(torch.load("models/supervised.pt",
-    #    map_location=get_device()))
+    model.load_state_dict(torch.load("models/supervised.pt",
+        map_location=get_device()))
     opp_model = PolicyModel().to(get_device())
-    #opp_model.load_state_dict(torch.load("models/supervised.pt",
-    #    map_location=get_device()))
+    opp_model.load_state_dict(torch.load("models/supervised.pt",
+        map_location=get_device()))
     opp_model_pool = []
 
-    opt = optim.Adam(model.parameters(), lr=1e-3)
+    opt = optim.Adam(model.parameters(), lr=1e-4)
     #opt = optim.SGD(model.parameters(), lr=1e-5)
 
     for epoch in range(10000):
