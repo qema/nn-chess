@@ -9,6 +9,7 @@ parser.add_argument("--pool_update_dur", type=int, default=64)
 parser.add_argument("--grad_clip", type=float, default=1)
 parser.add_argument("--should_clip_grad", type=bool, default=False)
 parser.add_argument("--n_workers", type=int, default=6)
+parser.add_argument("--start_from_supervised", type=bool, default=True)
 args = parser.parse_args()
 
 def train(model, opt, log_probs, rewards):
@@ -101,11 +102,14 @@ def run_games(n_games, model, opp_model, epoch):
 
 if __name__ == "__main__":
     model = PolicyModel().to(get_device())
-    model.load_state_dict(torch.load("models/supervised.pt",
-        map_location=get_device()))
     opp_model = PolicyModel().to(get_device())
-    opp_model.load_state_dict(torch.load("models/supervised.pt",
-        map_location=get_device()))
+    if args.start_from_supervised:
+        model.load_state_dict(torch.load("models/supervised.pt",
+            map_location=get_device()))
+        opp_model.load_state_dict(torch.load("models/supervised.pt",
+            map_location=get_device()))
+    else:
+        print("Starting from random")
     opp_model_pool = []
 
     opt = optim.Adam(model.parameters(), lr=1e-4)
