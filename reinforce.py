@@ -91,9 +91,11 @@ def run_games(n_games, model, opp_model, epoch):
 
 if __name__ == "__main__":
     model = PolicyModel().to(get_device())
+    model.load_state_dict(torch.load("models/supervised.pt",
+        map_location=get_device()))
     opp_model = PolicyModel().to(get_device())
-    #opp_model.load_state_dict(torch.load("models/supervised.pt",
-    #    map_location=get_device()))
+    opp_model.load_state_dict(torch.load("models/supervised.pt",
+        map_location=get_device()))
     opp_model_pool = []
 
     opt = optim.Adam(model.parameters(), lr=1e-3)

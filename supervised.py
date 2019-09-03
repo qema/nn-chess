@@ -48,7 +48,7 @@ if __name__ == "__main__":
                 if not moves: continue
                 moves = moves.split(" ")
                 all_moves.append(moves)
-                if args.small and len(all_moves) == 100:
+                if args.small and len(all_moves) >= 100:
                     break
 
     print("Playing games")
@@ -66,7 +66,7 @@ if __name__ == "__main__":
     while True:
         print("Batch {}".format(batch_num))
         boards, moves = zip(*random.sample(data_pts, args.batch_size))
-        boards_t = states_to_tensor(boards)
+        boards_t = states_to_tensor(boards, n_workers=args.n_workers)
         moves_t = moves_to_tensor(moves)
 
         loss = train(model, criterion, opt, boards_t, moves_t)

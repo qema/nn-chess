@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 import chess
 import random
+import multiprocessing as mp
 
 #import chess.variant
 #chess.Board = chess.variant.RacingKingsBoard
@@ -10,7 +11,7 @@ import random
 class PolicyModel(nn.Module):
     def __init__(self):
         super(PolicyModel, self).__init__()
-        self.conv1 = nn.Conv2d(48, 128, 5, padding=2)
+        self.conv1 = nn.Conv2d(20, 128, 5, padding=2)
         self.relu1 = nn.ReLU()
         self.conv2 = nn.Conv2d(128, 128, 5, padding=2)
         self.relu2 = nn.ReLU()
@@ -47,8 +48,8 @@ def get_device():
             else torch.device("cpu")
     return device_cache
 
-# input: list of fens
-def states_to_tensor(states):
+# input: list of fens OLD
+def states_to_tensor_old(states):
     boards_t = []
     board = chess.Board()
     for state in states:
@@ -83,6 +84,54 @@ def states_to_tensor(states):
 
         board_t = torch.cat((pieces_t, legal_t, capture_t, check_t), dim=0)
         boards_t.append(board_t)
+    boards_t = torch.stack(boards_t)
+    return boards_t
+
+def state_to_tensor(state):
+    board = chess.Board()
+    board.set_fen(state)
+    side = board.turn
+    piece_map = board.piece_map()
+
+    pieces_t = torch.zeros(12, 8, 8, device=get_device())
+    for pos, piece in piece_map.items():
+        col, row = chess.square_file(pos), chess.square_rank(pos)
+        idx = int(piece.color != side)*6 + (piece.piece_type-1)
+        pieces_t[idx][row][col] = 1
+
+    legal_t = torch.zeros(2, 8, 8, device=get_device())
+    capture_t = torch.zeros(2, 8, 8, device=get_device())
+    check_t = torch.zeros(2, 8, 8, device=get_device())
+    checkmate_t = torch.zeros(2, 8, 8, device=get_device())
+    for tmp_turn in [side, not side]:
+        board.turn = tmp_turn
+        for move in board.legal_moves:
+            piece = piece_map[move.from_square]
+            to_pos = move.to_square
+            col, row = chess.square_file(to_pos), chess.square_rank(to_pos)
+            idx = int(tmp_turn)
+            legal_t[idx][row][col] = 1
+            if board.is_capture(move):
+                capture_t[idx][row][col] = 1
+            board.push(move)
+            if board.is_checkmate():
+                checkmate_t[idx][row][col] = 1
+                check_t[idx][row][col] = 1
+            elif board.is_check():
+                check_t[idx][row][col] = 1
+            board.pop()
+    board.turn = side
+
+    board_t = torch.cat((pieces_t, legal_t, capture_t, check_t,
+        checkmate_t), dim=0)
+    return board_t
+
+# input: list of fens
+def states_to_tensor(states, n_workers=1):
+    boards_t = []
+        #boards_t.append(board_t)
+    with mp.Pool(n_workers) as pool:
+        boards_t = pool.map(state_to_tensor, states)
     boards_t = torch.stack(boards_t)
     return boards_t
 
