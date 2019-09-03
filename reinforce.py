@@ -3,7 +3,7 @@ import random
 import argparse
 
 parser = argparse.ArgumentParser(description="Train chess nn with RL")
-parser.add_argument("--game_batch_size", type=int, default=128)
+parser.add_argument("--game_batch_size", type=int, default=64)
 parser.add_argument("--max_recent_opps", type=int, default=10000)
 parser.add_argument("--pool_update_dur", type=int, default=64)
 parser.add_argument("--grad_clip", type=float, default=1)

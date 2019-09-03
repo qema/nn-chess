@@ -1,3 +1,4 @@
 proc/
 models/
 __pycache__/
+data/
