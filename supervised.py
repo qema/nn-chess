@@ -48,7 +48,7 @@ if __name__ == "__main__":
                 if not moves: continue
                 moves = moves.split(" ")
                 all_moves.append(moves)
-                if args.small and len(all_moves) >= 100:
+                if args.small and len(all_moves) >= 1000:
                     break
 
     print("Playing games")
