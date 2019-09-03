@@ -37,18 +37,21 @@ if __name__ == "__main__":
     game_num = 0
     data_pts = []
     all_moves = []
-    with open("data/games.txt") as f:
-        # burn header
-        for burn in range(5):
-            _ = next(f)
-        for row in f:
-            moves = row[:-2].split("###")[1].strip()
-            if not moves: continue
-            moves = moves.split(" ")
-            all_moves.append(moves)
-            if args.small and len(all_moves) == 100:
-                break
+    for file_idx in range(4):
+        with open("data/games{0:02d}".format(file_idx)) as f:
+            if file_idx == 0:
+                # burn header
+                for burn in range(5):
+                    _ = next(f)
+            for row in f:
+                moves = row[:-2].split("###")[1].strip()
+                if not moves: continue
+                moves = moves.split(" ")
+                all_moves.append(moves)
+                if args.small and len(all_moves) == 100:
+                    break
 
+    print("Playing games")
     with mp.Pool(args.n_workers) as p:
         data_pts = p.map(play_game, all_moves)
         print("{} games".format(len(data_pts)))

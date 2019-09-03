@@ -1,3 +1,3 @@
-export IP=40.112.63.218
+export IP=40.76.81.202
 
 scp andrew@$IP:~/nn-chess/models/*.* models/
