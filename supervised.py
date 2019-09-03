@@ -6,6 +6,7 @@ parser = argparse.ArgumentParser(description="Train chess nn with SL")
 parser.add_argument("--batch_size", type=int, default=1024)
 parser.add_argument("--small", type=bool, default=False)
 parser.add_argument("--n_workers", type=int, default=6)
+parser.add_argument("--continue_train", type=bool, default=False)
 
 def play_game(moves):
     data_pts = []
@@ -62,6 +63,10 @@ if __name__ == "__main__":
     print()
 
     model = PolicyModel()
+    if args.continue_train:
+        print("Loading weights from models/supervised.pt")
+        model.load_state_dict(torch.load("models/supervised.pt",
+            map_location=get_device()))
     opt = optim.Adam(model.parameters(), lr=1e-3)
     criterion = nn.NLLLoss()
     batch_num = 0
