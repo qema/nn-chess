@@ -51,11 +51,14 @@ if __name__ == "__main__":
                     break
 
     print("Playing games")
-    with mp.Pool(args.n_workers) as p:
-        data_pts = p.map(play_game, all_moves)
-        print("{} games".format(len(data_pts)))
-        data_pts = [pt for l in data_pts for pt in l]
-        print("{} moves".format(len(data_pts)))
+    if args.n_workers > 0:
+        with mp.Pool(args.n_workers) as p:
+            data_pts = p.map(play_game, all_moves)
+    else:
+        data_pts = map(play_game, all_moves)
+    print("{} games".format(len(data_pts)))
+    data_pts = [pt for l in data_pts for pt in l]
+    print("{} moves".format(len(data_pts)))
     print()
 
     model = PolicyModel()
@@ -64,7 +67,13 @@ if __name__ == "__main__":
     batch_num = 0
     while True:
         print("Batch {}".format(batch_num))
-        boards, moves = zip(*random.sample(data_pts, args.batch_size))
+        # sample from range (faster than sampling from data_pts directly)
+        sample_idxs = random.sample(range(len(data_pts)), args.batch_size)
+        boards, moves = [], []
+        for idx in sample_idxs:
+            board, move = data_pts[idx]
+            boards.append(board)
+            moves.append(move)
         boards_t = states_to_tensor(boards, n_workers=args.n_workers)
         moves_t = moves_to_tensor(moves)
 
