@@ -91,11 +91,14 @@ def state_to_tensor(state):
     return board_t
 
 # input: list of fens
-def states_to_tensor(states, n_workers=1):
+def states_to_tensor(states, n_workers=0):
     boards_t = []
         #boards_t.append(board_t)
-    with mp.Pool(n_workers) as pool:
-        boards_t = pool.map(state_to_tensor, states)
+    if n_workers > 0:
+        with mp.Pool(n_workers) as pool:
+            boards_t = pool.map(state_to_tensor, states)
+    else:
+        boards_t = [state_to_tensor(state) for state in states]
     boards_t = torch.stack(boards_t)
     return boards_t
 

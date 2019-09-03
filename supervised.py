@@ -1,7 +1,6 @@
 from common import *
 import argparse
 import random
-import multiprocessing as mp
 
 parser = argparse.ArgumentParser(description="Train chess nn with SL")
 parser.add_argument("--batch_size", type=int, default=1024)
@@ -48,7 +47,7 @@ if __name__ == "__main__":
                 if not moves: continue
                 moves = moves.split(" ")
                 all_moves.append(moves)
-                if args.small and len(all_moves) >= 1000:
+                if args.small and len(all_moves) >= 100:
                     break
 
     print("Playing games")

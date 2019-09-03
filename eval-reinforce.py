@@ -4,12 +4,12 @@ import numpy as np
 from scipy.stats import ttest_1samp
 
 model = PolicyModel().to(get_device())
-model.load_state_dict(torch.load("models/reinforce.pt",
+model.load_state_dict(torch.load("models/supervised.pt",
     map_location=get_device()))
 
 opp_model = PolicyModel().to(get_device())
-opp_model.load_state_dict(torch.load("models/supervised.pt",
-    map_location=get_device()))
+#opp_model.load_state_dict(torch.load("models/supervised.pt",
+#    map_location=get_device()))
 
 with torch.no_grad():
     rewards = []

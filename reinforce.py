@@ -8,6 +8,7 @@ parser.add_argument("--max_recent_opps", type=int, default=10000)
 parser.add_argument("--pool_update_dur", type=int, default=64)
 parser.add_argument("--grad_clip", type=float, default=1)
 parser.add_argument("--should_clip_grad", type=bool, default=False)
+parser.add_argument("--n_workers", type=int, default=6)
 args = parser.parse_args()
 
 def train(model, opt, log_probs, rewards):
@@ -40,17 +41,21 @@ def run_games(n_games, model, opp_model, epoch):
                     r_board_idxs[n] = len(r_boards)
                     r_boards.append(board.fen())
 
-        if l_boards:
-            l_boards_t = states_to_tensor(l_boards)
-        if r_boards:
-            r_boards_t = states_to_tensor(r_boards)
+        boards_t = states_to_tensor(l_boards + r_boards,
+            n_workers=args.n_workers)
+        l_boards_t, r_boards_t = (boards_t[:len(l_boards)],
+            boards_t[len(l_boards):])
 
         if t % 2 == 0:
-            pred_l = model(l_boards_t)
-            pred_r = opp_model(r_boards_t).detach()
+            if l_boards:
+                pred_l = model(l_boards_t)
+            if r_boards:
+                pred_r = opp_model(r_boards_t).detach()
         else:
-            pred_l = opp_model(l_boards_t).detach()
-            pred_r = model(r_boards_t)
+            if l_boards:
+                pred_l = opp_model(l_boards_t).detach()
+            if r_boards:
+                pred_r = model(r_boards_t)
 
         for n, board in enumerate(boards):
             if n not in done_idxs:
@@ -81,6 +86,8 @@ def run_games(n_games, model, opp_model, epoch):
                     done_idxs.add(n)
                     n_done += 1
                     reward = reward_for_side(board, n < n_games//2)
+                    if reward == 0:
+                        reward = -0.1
                     #print(n, board.result(), reward)
                     rewards[n] += [reward]*len(log_probs[n])
         t += 1
@@ -91,11 +98,11 @@ def run_games(n_games, model, opp_model, epoch):
 
 if __name__ == "__main__":
     model = PolicyModel().to(get_device())
-    model.load_state_dict(torch.load("models/supervised.pt",
-        map_location=get_device()))
+    #model.load_state_dict(torch.load("models/supervised.pt",
+    #    map_location=get_device()))
     opp_model = PolicyModel().to(get_device())
-    opp_model.load_state_dict(torch.load("models/supervised.pt",
-        map_location=get_device()))
+    #opp_model.load_state_dict(torch.load("models/supervised.pt",
+    #    map_location=get_device()))
     opp_model_pool = []
 
     opt = optim.Adam(model.parameters(), lr=1e-3)
