@@ -3,7 +3,10 @@ import torch.nn as nn
 import torch.optim as optim
 import chess
 import random
-import multiprocessing as mp
+import torch.multiprocessing as mp
+import resource
+rlimit = resource.getrlimit(resource.RLIMIT_NOFILE)
+resource.setrlimit(resource.RLIMIT_NOFILE, (4096, rlimit[1]))
 
 #import chess.variant
 #chess.Board = chess.variant.RacingKingsBoard
