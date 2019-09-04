@@ -5,36 +5,24 @@ import random
 parser = argparse.ArgumentParser(description="Generate value net dataset")
 parser.add_argument("--batch_size", type=int, default=64)
 parser.add_argument("--dataset_size", type=int, default=1000000)
+parser.add_argument("--n_workers", type=int, default=6)
 args = parser.parse_args()
 
-print("Note: if starting from scratch, make sure to delete existing "
-    "data in proc/")
-
-with torch.no_grad():
-    s_model = PolicyModel().to(get_device())
-    s_model.load_state_dict(torch.load("models/supervised.pt",
-        map_location=get_device()))
-
-    rl_model = PolicyModel().to(get_device())
-    # TODO: reinforce
-    rl_model.load_state_dict(torch.load("models/supervised.pt",
-        map_location=get_device()))
-
-    all_fens, all_rewards = [], []
-    while len(all_fens) < args.dataset_size:
-        print(len(all_fens))
-        n_games = args.batch_size
-        boards = [chess.Board() for i in range(n_games)]
-        record_pts = [random.randint(0, 200) for i in range(n_games)]
+def run_games(process_idx, batch_size, s_model, rl_model, file_lock):
+    n_completed = 0
+    while True:#len(all_fens) < args.dataset_size:
+        print("Process {}: {} completed".format(process_idx, n_completed))
+        boards = [chess.Board() for i in range(batch_size)]
+        record_pts = [random.randint(0, 200) for i in range(batch_size)]
         done_idxs = set()
-        fens = [None for i in range(n_games)]
-        sides = [None for i in range(n_games)]
-        rewards = [None for i in range(n_games)]
+        fens = [None for i in range(batch_size)]
+        sides = [None for i in range(batch_size)]
+        rewards = [None for i in range(batch_size)]
 
         t = 0
         n_done = 0
-        while n_done < n_games:
-            s_board_idxs, r_board_idxs = [0]*n_games, [0]*n_games
+        while n_done < batch_size:
+            s_board_idxs, r_board_idxs = [0]*batch_size, [0]*batch_size
             s_boards, r_boards = [], []
             for n, board in enumerate(boards):
                 if n not in done_idxs:
@@ -85,11 +73,29 @@ with torch.no_grad():
                         rewards[n] = reward_for_side(board, sides[n])
             t += 1
 
-        with open("proc/value-net-boards.txt", "a") as f_boards:
-            with open("proc/value-net-rewards.txt", "a") as f_rewards:
-                for fen, reward in zip(fens, rewards):
-                    if fen is not None:
-                        f_boards.write("{}\n".format(fen))
-                        f_rewards.write("{}\n".format(reward))
-                        all_fens.append(fen)
-                        all_rewards.append(reward)
+        with file_lock:
+            with open("proc/value-net-boards.txt", "a") as f_boards:
+                with open("proc/value-net-rewards.txt", "a") as f_rewards:
+                    for fen, reward in zip(fens, rewards):
+                        if fen is not None:
+                            f_boards.write("{}\n".format(fen))
+                            f_rewards.write("{}\n".format(reward))
+                            n_completed += 1
+
+if __name__ == "__main__":
+    print("Note: if starting from scratch, make sure to delete existing "
+        "data in proc/")
+
+    s_model = PolicyModel().to(get_device())
+    s_model.load_state_dict(torch.load("models/supervised.pt",
+        map_location=get_device()))
+
+    rl_model = PolicyModel().to(get_device())
+    # TODO: reinforce
+    rl_model.load_state_dict(torch.load("models/supervised.pt",
+        map_location=get_device()))
+
+    file_lock = mp.Lock()
+    with torch.no_grad():
+        mp.spawn(run_games, args=(args.batch_size, s_model, rl_model,
+            file_lock), nprocs=args.n_workers)
