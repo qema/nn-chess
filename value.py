@@ -2,7 +2,7 @@ from common import *
 import argparse
 
 parser = argparse.ArgumentParser(description="Train chess nn with RL")
-parser.add_argument("--batch_size", type=int, default=64)
+parser.add_argument("--batch_size", type=int, default=256)
 parser.add_argument("--n_workers", type=int, default=0)
 args = parser.parse_args()
 

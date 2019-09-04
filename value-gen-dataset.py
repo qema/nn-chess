@@ -4,7 +4,7 @@ import random
 
 parser = argparse.ArgumentParser(description="Generate value net dataset")
 parser.add_argument("--batch_size", type=int, default=64)
-parser.add_argument("--dataset_size", type=int, default=1024)
+parser.add_argument("--dataset_size", type=int, default=1000000)
 args = parser.parse_args()
 
 s_model = PolicyModel().to(get_device())
@@ -79,14 +79,11 @@ while len(all_fens) < args.dataset_size:
                     rewards[n] = reward_for_side(board, sides[n])
         t += 1
 
-    for fen, reward in zip(fens, rewards):
-        if fen is not None:
-            all_fens.append(fen)
-            all_rewards.append(reward)
-
-with open("proc/value-net-boards.txt", "w") as f:
-    for fen in all_fens:
-        f.write("{}\n".format(fen))
-with open("proc/value-net-rewards.txt", "w") as f:
-    for reward in all_rewards:
-        f.write("{}\n".format(reward))
+    with open("proc/value-net-boards.txt", "a") as f_boards:
+        with open("proc/value-net-rewards.txt", "a") as f_rewards:
+            for fen, reward in zip(fens, rewards):
+                if fen is not None:
+                    f_boards.write("{}\n".format(fen))
+                    f_rewards.write("{}\n".format(reward))
+                    all_fens.append(fen)
+                    all_rewards.append(reward)
