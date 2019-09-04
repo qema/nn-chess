@@ -6,9 +6,9 @@ parser = argparse.ArgumentParser(description="Train chess nn with RL")
 parser.add_argument("--game_batch_size", type=int, default=64)
 parser.add_argument("--max_recent_opps", type=int, default=10000)
 parser.add_argument("--pool_update_dur", type=int, default=64)
-parser.add_argument("--grad_clip", type=float, default=1)
-parser.add_argument("--should_clip_grad", type=bool, default=False)
-parser.add_argument("--n_workers", type=int, default=6)
+parser.add_argument("--grad_clip", type=float, default=0.1)
+parser.add_argument("--should_clip_grad", type=bool, default=True)
+parser.add_argument("--n_workers", type=int, default=0)
 parser.add_argument("--start_from_supervised", type=bool, default=True)
 args = parser.parse_args()
 
@@ -17,9 +17,9 @@ def train(model, opt, log_probs, rewards):
     loss = -log_probs * rewards
     loss = torch.sum(loss) / args.game_batch_size
     loss.backward()
-#    if loss > -0.0001 and loss < 0.0001:
-#        print(log_probs)
-#        print(rewards)
+    if (loss > -0.0001 and loss < 0.0001) or True:
+        print(log_probs)
+        print(rewards)
     if args.should_clip_grad:
         torch.nn.utils.clip_grad_norm_(model.parameters(), args.grad_clip)
     opt.step()
@@ -71,6 +71,9 @@ def run_games(n_games, model, opp_model, epoch):
                 else:
                     pred = pred_r[r_board_idxs[n]]
 
+                if torch.min(torch.abs(pred)).item() < 0.00001:
+                    print(pred[valid_idxs])
+
                 actions = torch.distributions.Categorical(
                     logits=pred[valid_idxs])
                 action_idx = actions.sample()
@@ -90,8 +93,8 @@ def run_games(n_games, model, opp_model, epoch):
                     done_idxs.add(n)
                     n_done += 1
                     reward = reward_for_side(board, n < n_games//2)
-                    #if reward == 0:
-                    #    reward = -0.1
+                    if reward == 0:
+                        reward = -0.1
                     #print(n, board.result(), reward)
                     rewards[n] += [reward]*len(log_probs[n])
         t += 1
@@ -112,8 +115,9 @@ if __name__ == "__main__":
         print("Starting from random")
     opp_model_pool = []
 
-    opt = optim.Adam(model.parameters(), lr=1e-4)
-    #opt = optim.SGD(model.parameters(), lr=1e-5)
+    # TODO: lr, opt method
+    #opt = optim.Adam(model.parameters(), lr=1e-2)
+    opt = optim.SGD(model.parameters(), lr=1e-3)
 
     for epoch in range(10000):
         print("Epoch {}".format(epoch))
