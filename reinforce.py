@@ -3,23 +3,24 @@ import random
 import argparse
 
 parser = argparse.ArgumentParser(description="Train chess nn with RL")
-parser.add_argument("--game_batch_size", type=int, default=64)
+parser.add_argument("--batch_size", type=int, default=64)
 parser.add_argument("--max_recent_opps", type=int, default=10000)
 parser.add_argument("--pool_update_dur", type=int, default=64)
 parser.add_argument("--grad_clip", type=float, default=0.1)
-parser.add_argument("--should_clip_grad", type=bool, default=True)
+parser.add_argument("--disable_grad_clipping", dest="should_clip_grad",
+    action="store_false")
 parser.add_argument("--n_workers", type=int, default=0)
-parser.add_argument("--start_from_supervised", type=bool, default=True)
+parser.add_argument("--start_from_supervised", action="store_true")
 args = parser.parse_args()
 
 def train(model, opt, log_probs, rewards):
     model.zero_grad()
     loss = -log_probs * rewards
-    loss = torch.sum(loss) / args.game_batch_size
+    loss = torch.sum(loss) / args.batch_size
     loss.backward()
-    if (loss > -0.0001 and loss < 0.0001) or True:
-        print(log_probs)
-        print(rewards)
+    #if (loss > -0.0001 and loss < 0.0001) or True:
+    #    print(log_probs)
+    #    print(rewards)
     if args.should_clip_grad:
         torch.nn.utils.clip_grad_norm_(model.parameters(), args.grad_clip)
     opt.step()
@@ -71,8 +72,8 @@ def run_games(n_games, model, opp_model, epoch):
                 else:
                     pred = pred_r[r_board_idxs[n]]
 
-                if torch.min(torch.abs(pred)).item() < 0.00001:
-                    print(pred[valid_idxs])
+                #if torch.min(torch.abs(pred)).item() < 0.00001:
+                #    print(pred[valid_idxs])
 
                 actions = torch.distributions.Categorical(
                     logits=pred[valid_idxs])
@@ -93,6 +94,7 @@ def run_games(n_games, model, opp_model, epoch):
                     done_idxs.add(n)
                     n_done += 1
                     reward = reward_for_side(board, n < n_games//2)
+                    # TODO: penalty for draws?
                     if reward == 0:
                         reward = -0.1
                     #print(n, board.result(), reward)
@@ -122,7 +124,7 @@ if __name__ == "__main__":
     for epoch in range(10000):
         print("Epoch {}".format(epoch))
         # play n games
-        log_probs, rewards = run_games(args.game_batch_size, model, opp_model,
+        log_probs, rewards = run_games(args.batch_size, model, opp_model,
             epoch)
 
         # train

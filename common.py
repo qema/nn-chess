@@ -11,6 +11,34 @@ resource.setrlimit(resource.RLIMIT_NOFILE, (4096, rlimit[1]))
 #import chess.variant
 #chess.Board = chess.variant.RacingKingsBoard
 
+class ValueModel(nn.Module):
+    def __init__(self):
+        super(ValueModel, self).__init__()
+        self.conv1 = nn.Conv2d(20, 128, 5, padding=2)
+        self.relu1 = nn.ReLU()
+        self.conv2 = nn.Conv2d(128, 128, 5, padding=2)
+        self.relu2 = nn.ReLU()
+        self.conv3 = nn.Conv2d(128, 128, 3, padding=1)
+        self.relu3 = nn.ReLU()
+        #self.conv4 = nn.Conv2d(128, 128, 3, padding=1)
+        #self.relu4 = nn.ReLU()
+        self.fc1 = nn.Linear(64*128, 256)
+        self.relu4 = nn.ReLU()
+        self.fc2 = nn.Linear(256, 1)
+
+    def forward(self, boards):
+        out = self.conv1(boards)
+        out = self.relu1(out)
+        out = self.conv2(out)
+        out = self.relu2(out)
+        out = self.conv3(out)
+        out = self.relu3(out)
+        out = out.view(out.shape[0], -1)
+        out = self.fc1(out)
+        out = self.relu4(out)
+        out = self.fc2(out)
+        return out
+
 class PolicyModel(nn.Module):
     def __init__(self):
         super(PolicyModel, self).__init__()

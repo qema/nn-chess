@@ -2,14 +2,21 @@ from common import *
 import sys
 import numpy as np
 from scipy.stats import ttest_1samp
+import argparse
+
+parser = argparse.ArgumentParser(description="Compare models")
+parser.add_argument("model", nargs=2)
+args = parser.parse_args()
 
 model = PolicyModel().to(get_device())
-model.load_state_dict(torch.load("models/reinforce.pt",
-    map_location=get_device()))
+if args.model[0] != "random":
+    model.load_state_dict(torch.load("models/{}.pt".format(args.model[0]),
+        map_location=get_device()))
 
 opp_model = PolicyModel().to(get_device())
-#opp_model.load_state_dict(torch.load("models/supervised.pt",
-#    map_location=get_device()))
+if args.model[1] != "random":
+    opp_model.load_state_dict(torch.load("models/{}.pt".format(args.model[1]),
+        map_location=get_device()))
 
 with torch.no_grad():
     rewards = []
@@ -34,6 +41,6 @@ with torch.no_grad():
 
         board.reset()
 
-print("Average reward for RL: {:.6f}".format(np.mean(rewards)))
-print("Different from random with p={:.4f}".format(
+print("Average reward for {}: {:.6f}".format(args.model[0], np.mean(rewards)))
+print("Different from zero with p={:.4f}".format(
     ttest_1samp(rewards, 0)[1]))
