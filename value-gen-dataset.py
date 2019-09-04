@@ -89,11 +89,13 @@ if __name__ == "__main__":
     s_model = PolicyModel().to(get_device())
     s_model.load_state_dict(torch.load("models/supervised.pt",
         map_location=get_device()))
+    s_model.share_memory_()
 
     rl_model = PolicyModel().to(get_device())
     # TODO: reinforce
     rl_model.load_state_dict(torch.load("models/supervised.pt",
         map_location=get_device()))
+    rl_model.share_memory_()
 
     file_lock = mp.Lock()
     with torch.no_grad():
