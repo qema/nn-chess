@@ -102,5 +102,11 @@ if __name__ == "__main__":
     rl_model.share_memory()
 
     file_lock = mp.Lock()
-    mp.spawn(run_games, args=(args.batch_size, s_model, rl_model,
-        file_lock), nprocs=args.n_workers)
+    processes = []
+    for idx in range(args.n_workers):
+        p = mp.Process(target=run_games,
+            args=(args.batch_size, s_model, rl_model, file_lock))
+        p.start()
+        process.append(p)
+    for p in processes:
+        p.join()
