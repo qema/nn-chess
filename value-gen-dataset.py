@@ -85,6 +85,7 @@ def run_games(process_idx, batch_size, s_model, rl_model, file_lock):
 if __name__ == "__main__":
     print("Note: if starting from scratch, make sure to delete existing "
         "data in proc/")
+    mp.set_start_method("spawn")
 
     s_model = PolicyModel().to(get_device())
     s_model.load_state_dict(torch.load("models/supervised.pt",
