@@ -7,6 +7,9 @@ parser.add_argument("--batch_size", type=int, default=64)
 parser.add_argument("--dataset_size", type=int, default=1000000)
 args = parser.parse_args()
 
+print("Note: if starting from scratch, make sure to delete existing "
+    "data in proc/")
+
 s_model = PolicyModel().to(get_device())
 s_model.load_state_dict(torch.load("models/supervised.pt",
     map_location=get_device()))
@@ -62,8 +65,6 @@ while len(all_fens) < args.dataset_size:
 
                 if t == record_pts[n]:
                     move = random.choice(legal_moves)
-                    fens[n] = board.fen()
-                    sides[n] = board.turn
                 else:
                     actions = torch.distributions.Categorical(
                         logits=pred[valid_idxs])
@@ -72,6 +73,10 @@ while len(all_fens) < args.dataset_size:
                     if move.promotion is not None:
                         move.promotion = 5
                 board.push(move)
+
+                if t == record_pts[n]:
+                    fens[n] = board.fen()
+                    sides[n] = board.turn
 
                 if board.is_game_over():
                     done_idxs.add(n)

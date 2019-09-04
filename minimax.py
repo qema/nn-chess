@@ -13,21 +13,21 @@ class MinimaxAgent:
             reward = 0 if board.result() == "1/2-1/2" else -1
             return None, reward
         elif depth == 0:
-            #piece_values = {chess.PAWN: 1,
-            #    chess.BISHOP: 3,
-            #    chess.KNIGHT: 3,
-            #    chess.ROOK: 5,
-            #    chess.QUEEN: 9,
-            #    chess.KING: 0}
-            #pieces = board.piece_map().values()
-            #my_pieces = [piece_values[p.piece_type]
-            #    for p in pieces if p.color == board.turn]
-            #their_pieces = [piece_values[p.piece_type]
-            #    for p in pieces if p.color != board.turn]
-            #value = sum(my_pieces) - sum(their_pieces)
-            #return None, value
-            board_t = states_to_tensor([board.fen()])
-            return None, self.value_model(board_t).item()
+            piece_values = {chess.PAWN: 1,
+                chess.BISHOP: 3,
+                chess.KNIGHT: 3,
+                chess.ROOK: 5,
+                chess.QUEEN: 9,
+                chess.KING: 0}
+            pieces = board.piece_map().values()
+            my_pieces = [piece_values[p.piece_type]
+                for p in pieces if p.color == board.turn]
+            their_pieces = [piece_values[p.piece_type]
+                for p in pieces if p.color != board.turn]
+            value = sum(my_pieces) - sum(their_pieces)
+            return None, value
+            #board_t = states_to_tensor([board.fen()])
+            #return None, self.value_model(board_t).item()
         else:
             best_move, best_value = None, -float("inf")
             legal_moves = list(board.legal_moves)
