@@ -10,7 +10,7 @@ parser.add_argument("--grad_clip", type=float, default=0.1)
 parser.add_argument("--disable_grad_clipping", dest="should_clip_grad",
     action="store_false")
 parser.add_argument("--n_workers", type=int, default=0)
-parser.add_argument("--start_from_supervised", action="store_true")
+parser.add_argument("--start_from_scratch", action="store_false")
 args = parser.parse_args()
 
 def train(model, opt, log_probs, rewards):
@@ -95,8 +95,8 @@ def run_games(n_games, model, opp_model, epoch):
                     n_done += 1
                     reward = reward_for_side(board, n < n_games//2)
                     # TODO: penalty for draws?
-                    if reward == 0:
-                        reward = -0.1
+                    #if reward == 0:
+                    #    reward = -0.1
                     #print(n, board.result(), reward)
                     rewards[n] += [reward]*len(log_probs[n])
         t += 1
@@ -108,7 +108,8 @@ def run_games(n_games, model, opp_model, epoch):
 if __name__ == "__main__":
     model = PolicyModel().to(get_device())
     opp_model = PolicyModel().to(get_device())
-    if args.start_from_supervised:
+    if not args.start_from_scratch:
+        print("Loading models/supervised.pt")
         model.load_state_dict(torch.load("models/supervised.pt",
             map_location=get_device()))
         opp_model.load_state_dict(torch.load("models/supervised.pt",
@@ -118,8 +119,8 @@ if __name__ == "__main__":
     opp_model_pool = []
 
     # TODO: lr, opt method
-    #opt = optim.Adam(model.parameters(), lr=1e-2)
-    opt = optim.SGD(model.parameters(), lr=1e-3)
+    opt = optim.Adam(model.parameters(), lr=1e-4)
+    #opt = optim.SGD(model.parameters(), lr=1e-2)
 
     for epoch in range(10000):
         print("Epoch {}".format(epoch))

@@ -6,6 +6,7 @@ import argparse
 
 parser = argparse.ArgumentParser(description="Compare models")
 parser.add_argument("model", nargs=2)
+parser.add_argument("--interactive", action="store_true")
 args = parser.parse_args()
 
 model = PolicyModel().to(get_device())
@@ -23,17 +24,19 @@ with torch.no_grad():
     board = chess.Board()
     for epoch in range(100):
         my_side = epoch % 2 == 0
-        #print(board)
-        #print()
+        if args.interactive:
+            print(board)
+            print()
         while not board.is_game_over():
             if board.turn == my_side:
                 move = choose_move(board, model, 0)
             else:
                 move = choose_move(board, opp_model, 0)
             board.push(move)
-            #print(board)
-            #print()
-            #input()
+            if args.interactive:
+                print(board)
+                print()
+                input()
 
         reward = reward_for_side(board, my_side)
         rewards.append(reward)

@@ -8,8 +8,15 @@ import resource
 rlimit = resource.getrlimit(resource.RLIMIT_NOFILE)
 resource.setrlimit(resource.RLIMIT_NOFILE, (4096, rlimit[1]))
 
-#import chess.variant
-#chess.Board = chess.variant.RacingKingsBoard
+import chess.variant
+chess.Board = chess.variant.RacingKingsBoard
+
+piece_values = {chess.PAWN: 1,
+    chess.BISHOP: 3,
+    chess.KNIGHT: 3,
+    chess.ROOK: 5,
+    chess.QUEEN: 9,
+    chess.KING: 0}
 
 class ValueModel(nn.Module):
     def __init__(self):
@@ -53,6 +60,7 @@ class PolicyModel(nn.Module):
         self.fc1 = nn.Linear(64*128, 256)
         self.relu4 = nn.ReLU()
         self.fc2 = nn.Linear(256, 64*64)
+        self.testfc = nn.Linear(1, 64*64)
         self.softmax = nn.LogSoftmax(dim=1)
 
     def forward(self, boards):
@@ -70,6 +78,15 @@ class PolicyModel(nn.Module):
         out = self.softmax(out)
         #out = out.view(out.shape[0], 2, 8, 8)
         return out
+
+class LinearPolicyModel(nn.Module):
+    def __init__(self):
+        super(LinearPolicyModel, self).__init__()
+        self.fc1 = nn.Linear(2*64*64, 64*64)
+        self.softmax = nn.LogSoftmax(dim=1)
+
+    def forward(self, feats):
+        return self.softmax(self.fc1(feats))
 
 device_cache = None
 def get_device():
@@ -127,6 +144,32 @@ def states_to_tensor(states, n_workers=0):
             boards_t = pool.map(state_to_tensor, states)
     else:
         boards_t = [state_to_tensor(state) for state in states]
+    boards_t = torch.stack(boards_t)
+    return boards_t
+
+def state_to_features(state):
+    board = chess.Board(state)
+    legal_t = torch.zeros(64*64, device=get_device())
+    capture_t = torch.zeros(64*64, device=get_device())
+    #check_t = torch.zeros(64*64, device=get_device())
+    #checkmate_t = torch.zeros(64*64, device=get_device())
+    for move in board.legal_moves:
+        action_idx = move_to_action_idx(move)
+        legal_t[action_idx] = 1
+        if board.is_capture(move):
+            capture_t[action_idx] = 1
+        #board.push(move)
+        #if board.is_checkmate():
+        #    checkmate_t[action_idx] = 1
+        #elif board.is_check():
+        #    check_t[action_idx] = 1
+        #board.pop()
+    feats_t = torch.cat((legal_t, capture_t))#, check_t, checkmate_t))
+    return feats_t
+
+# input: list of fens
+def states_to_features(states):
+    boards_t = [state_to_features(state) for state in states]
     boards_t = torch.stack(boards_t)
     return boards_t
 

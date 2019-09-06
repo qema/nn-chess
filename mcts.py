@@ -24,7 +24,7 @@ class GameTreeNode:
         self.actives.append(False)
         self.children.append(GameTreeNode())
 
-class MCTS:
+class MCTSAgent:
     def __init__(self, board, side, tree_policy, rollout_policy, value_model,
         lamb, beta, c_puct, n_thr):
         self.tree_policy = tree_policy
@@ -69,14 +69,31 @@ class MCTS:
         my_side = self.my_side
 
         # value net
-        board_t, meta_t = states_to_tensor([board.fen()])
-        board_t = board_t.type(torch.float)
-        meta_t = meta_t.type(torch.float)
-        pred_value = self.value_model(board_t, meta_t)[0].item()
+        board_t = states_to_tensor([board.fen()])
+        if self.lamb < 1:
+            pred_value = self.value_model(board_t)[0].item()
+        else:
+            pred_value = 0
 
         # rollout
         while not board.is_game_over():
-            move = choose_move(board, self.rollout_policy, 0)
+            #move = choose_move(board, self.rollout_policy, 0)
+            best_move, best_value = None, -float("inf")
+            for move in board.legal_moves:
+                board.push(move)
+                value = 0
+                pieces = board.piece_map().values()
+                my_pieces = [piece_values[p.piece_type]
+                    for p in pieces if p.color == board.turn]
+                their_pieces = [piece_values[p.piece_type]
+                    for p in pieces if p.color != board.turn]
+                value += sum(my_pieces) - sum(their_pieces)
+                if board.is_checkmate():
+                    value = 100
+                if value > best_value:
+                    best_value = value
+                    best_move = move
+                board.pop()
             board.push(move)            
         rollout_value = reward_for_side(board, my_side)
 
@@ -98,11 +115,9 @@ class MCTS:
             if cur.nrs[idx] >= self.n_thr and not cur.actives[idx]:
                 #print("new")
                 cur.actives[idx] = True
-                board_t, meta_t = states_to_tensor([board_fen])
-                board_t = board_t.type(torch.float)
-                meta_t = meta_t.type(torch.float)
-                action_t = actions_to_tensor([cur.moves[idx]])[0]
-                p = (self.tree_policy(board_t, meta_t)[0] * self.beta)[
+                board_t = states_to_tensor([board_fen])
+                action_t = moves_to_tensor([cur.moves[idx]])[0]
+                p = (self.tree_policy(board_t)[0] * self.beta)[
                     action_t].item()
                 cur.ps[idx] = p
                 
@@ -119,7 +134,7 @@ class MCTS:
         self.backup(path, pred_value, rollout_value, board_fen)
 
     # returns best move (uci)
-    def search(self, n_steps):
+    def choose_move(self, n_steps):
         for i in range(n_steps):
             self.search_step()
 
@@ -150,9 +165,13 @@ if __name__ == "__main__":
 
     board = chess.Board()
 
-    searcher = MCTS(board, True, tree_policy, rollout_policy, value_model,
-        1, 0.67, 1, 10)
-    #searcher.game_tree_root.add_child("a2a3", 0.3, 0, 0, 2, 2)
-    #searcher.game_tree_root.add_child("b2b3", 0.5, 0, 0, 1, 3)
-    best_move = searcher.search(10)
-    print(best_move)
+    agent = MCTSAgent(board, True, tree_policy, rollout_policy, value_model,
+        0.5, 0.67, 1, 10)
+    while not board.is_game_over():
+        #searcher.game_tree_root.add_child("a2a3", 0.3, 0, 0, 2, 2)
+        #searcher.game_tree_root.add_child("b2b3", 0.5, 0, 0, 1, 3)
+        best_move = agent.choose_move(100)
+        agent.commit_move_uci(best_move)
+        board.push(chess.Move.from_uci(best_move))
+        print(best_move)
+        print(board)

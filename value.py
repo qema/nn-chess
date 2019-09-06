@@ -8,7 +8,7 @@ args = parser.parse_args()
 
 def train(model, criterion, opt, board, reward):
     model.zero_grad()
-    pred = model(board)
+    pred = model(board).flatten()
     loss = criterion(pred, reward)
     loss.backward()
     opt.step()
