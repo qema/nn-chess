@@ -9,7 +9,7 @@ rlimit = resource.getrlimit(resource.RLIMIT_NOFILE)
 resource.setrlimit(resource.RLIMIT_NOFILE, (4096, rlimit[1]))
 
 import chess.variant
-chess.Board = chess.variant.RacingKingsBoard
+#chess.Board = chess.variant.RacingKingsBoard
 
 piece_values = {chess.PAWN: 1,
     chess.BISHOP: 3,
@@ -53,10 +53,14 @@ class PolicyModel(nn.Module):
         self.relu1 = nn.ReLU()
         self.conv2 = nn.Conv2d(128, 128, 5, padding=2)
         self.relu2 = nn.ReLU()
-        self.conv3 = nn.Conv2d(128, 128, 3, padding=1)
+        self.conv3 = nn.Conv2d(128, 128, 5, padding=2)
         self.relu3 = nn.ReLU()
-        #self.conv4 = nn.Conv2d(128, 128, 3, padding=1)
-        #self.relu4 = nn.ReLU()
+        self.conv4 = nn.Conv2d(128, 128, 3, padding=1)
+        self.relu4 = nn.ReLU()
+        self.conv5 = nn.Conv2d(128, 128, 3, padding=1)
+        self.relu5 = nn.ReLU()
+        self.conv6 = nn.Conv2d(128, 128, 3, padding=1)
+        self.relu6 = nn.ReLU()
         self.fc1 = nn.Linear(64*128, 256)
         self.relu4 = nn.ReLU()
         self.fc2 = nn.Linear(256, 64*64)
@@ -70,6 +74,12 @@ class PolicyModel(nn.Module):
         out = self.relu2(out)
         out = self.conv3(out)
         out = self.relu3(out)
+        out = self.conv4(out)
+        out = self.relu4(out)
+        out = self.conv5(out)
+        out = self.relu5(out)
+        out = self.conv6(out)
+        out = self.relu6(out)
         #out = self.conv4(out)
         out = out.view(out.shape[0], -1)
         out = self.fc1(out)
