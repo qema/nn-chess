@@ -4,6 +4,7 @@ import argparse
 
 parser = argparse.ArgumentParser(description="Train chess nn with RL")
 parser.add_argument("--batch_size", type=int, default=64)
+parser.add_argument("--max_game_turns", type=int, default=200)
 parser.add_argument("--max_recent_opps", type=int, default=10000)
 parser.add_argument("--pool_update_dur", type=int, default=64)
 parser.add_argument("--grad_clip", type=float, default=0.1)
@@ -90,10 +91,13 @@ def run_games(n_games, model, opp_model, epoch):
                             log_prob.unsqueeze(0)))
                 board.push(move)
 
-                if board.is_game_over():
+                if board.is_game_over() or t > args.max_game_turns:
                     done_idxs.add(n)
                     n_done += 1
-                    reward = reward_for_side(board, n < n_games//2)
+                    if t > args.max_game_turns:
+                        reward = 0
+                    else:
+                        reward = reward_for_side(board, n < n_games//2)
                     # TODO: penalty for draws?
                     #if reward == 0:
                     #    reward = -0.1
